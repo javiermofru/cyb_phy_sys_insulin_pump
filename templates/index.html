@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insulin Pump</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>.column { float: left; width: 33.33%; text-align:left; }  .row:after { content: ""; display: table; clear: both; } .row {text-align:center; margin:auto;} .messages {background-color: #F4F4F4; margin-left: 25px; margin-right: 25px;}</style>
+    <script>
+        setInterval(refreshMessage, 1000);
+
+        function refreshMessage() {
+            fetch('http://localhost:5000/message', {}).then(function (response) {
+                return response.text();
+            }).then(function(data) {
+                document.getElementById("message").innerHTML = data;
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="row">
+        <h1>Insulin Pump</h1>
+        <div class="column">
+            
+            <form action="/update_parameters" method="post">
+                <label for="glucose_ideal">Target Glucose Level:</label>
+                <input type="number" id="glucose_ideal" name="glucose_ideal" value="{{ insulin_pump.glucose_ideal }}" required>
+                <br>
+                <button type="submit">Update Parameters</button>
+            </form>
+        </div>
+        <div class="column">
+            <!-- DoS vulnerability -->
+            <form action="/activate_dos" method="post">
+                <label><input type="checkbox" name="vulnerability" value="dos" onChange="this.form.submit()" {% if insulin_pump.dos_vulnerability %}checked{% endif %}> DoS Attack (Denial of Service)</label><br>
+            </form>
+
+            <form action="/perform_dos_attack" method="post">
+                <button type="submit">Perform DoS Attack</button>
+            </form>
+           
+            <!-- Unauthorized access vulnerability -->
+            <form action="/activate_unauthorized_access" method="post">
+                <label><input type="checkbox" name="vulnerability" value="unacc" onChange="this.form.submit()" {% if  insulin_pump.non_authorized_access_vulnerability %}checked{% endif %}> Unauthorized Access Attack</label><br>
+            </form>
+
+            <form action="/perform_unauthorized_access_attack" method="post">
+                <label for="attacker_name">Attacker's Name:</label>
+                <input type="text" id="attacker_name" name="attacker_name" required>
+                <button type="submit">Perform Unauthorized Access Attack</button>
+            </form>
+        
+            <!-- Eavesdropping vulnerability -->
+            <form action="/activate_eavesdropping" method="post">
+                <label><input type="checkbox" name="vulnerability" value="eaves" onChange="this.form.submit()" {% if insulin_pump.eavesdropping_vulnerability %}checked{% endif %}> Eavesdropping Attack</label><br>
+            </form>
+
+
+            <form action="/perform_eavesdropping_attack" method="post">
+                <label for="attacker_name">Attacker's Name (Eavesdropping):</label>
+                <input type="text" id="attacker_name" name="attacker_name" required>
+                <button type="submit">Perform Eavesdropping Attack</button>
+            </form>
+
+            <!-- Integrity vulnerability -->
+
+            <form action="/activate_data_integrity" method="post">
+                <label><input type="checkbox" name="vulnerability" value="dataint" onChange="this.form.submit()" {% if insulin_pump.data_integrity_vulnerability %}checked{% endif %}> Data Integrity Attack</label><br>
+            </form>
+
+            <form action="/perform_integrity_attack" method="post">
+                <label for="integrity">Integrity Attack:</label>
+                <button type="submit">Perform Integrity Attack</button>
+            </form>
+            
+    
+        </div>
+        <div class="column">
+            
+            <p>DoS Vulnerability: {% if insulin_pump.dos_vulnerability %}Activated{% else %}Deactivated{% endif %}</p>
+            <p>Unauthorized Access: {% if insulin_pump.non_authorized_access_vulnerability %}Activated{% else %}Deactivated{% endif %}</p>
+            <p>Last Unauthorized Access Attempt: {{ insulin_pump.user_attempting_access }}</p>
+            <p>Eavesdropping: {% if insulin_pump.eavesdropping_vulnerability %}Activated{% else %}Deactivated{% endif %}</p>
+            <p>Data Integrity: {% if insulin_pump.data_integrity_vulnerability %}Activated{% else %}Deactivated{% endif %}</p>
+        </div>
+      </div>
+    
+
+    <h2>Insulin Pump Status</h2>
+    
+    <canvas id="insulinChart" width="400" height="78"></canvas>
+    <pre class="messages" id="message">{{ insulin_pump.message }}</pre>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initial configuration of the chart
+            var ctx = document.getElementById('insulinChart').getContext('2d');
+            var insulinChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Insulin Levels',
+                        borderColor: 'rgb(75, 192, 192)',
+                        data: [],
+                    }, {
+                        label: 'Average Insulin Level',
+                        borderColor: 'rgb(255, 99, 132)',
+                        borderDash: [5, 5],
+                        data: [],
+                    }, {
+                        label: 'Glucose Levels',
+                        borderColor: 'rgb(255, 205, 86)',
+                        data: [],
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom'
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                        }
+                    }
+                }
+            });
+    
+            // Get reference to the form element
+            var averageLevelInput = document.getElementById('glucose_ideal');
+    
+            // Function to add data to the chart
+            function addData(time, insulinLevel, averageLevel, glucoseLevel) {
+                insulinChart.data.labels.push(time);
+                insulinChart.data.datasets[0].data.push(insulinLevel);
+                insulinChart.data.datasets[1].data.push(averageLevel);
+                insulinChart.data.datasets[2].data.push(glucoseLevel);
+    
+                if (insulinChart.data.labels.length > 20) {
+                    insulinChart.data.labels.shift();
+                    insulinChart.data.datasets[0].data.shift();
+                    insulinChart.data.datasets[1].data.shift();
+                    insulinChart.data.datasets[2].data.shift();
+                }
+    
+                insulinChart.update();
+            }
+    
+            function simulateChartUpdate() {
+                var time = 0;
+                var averageLevel = parseFloat(averageLevelInput.value);
+    
+                var dosVulnerabilityActivated = {% if insulin_pump.dos_vulnerability %}true{% else %}false{% endif %};
+    
+                function updateChart() {
+                    // Simulate time and insulin level
+                    time += 1;
+                    var insulinLevel = 0;
+    
+                    // Simulate glucose levels in relation to insulin and new input values
+                    var glucoseLevel = averageLevel + (Math.random() * 30); // Simulate fluctuations in glucose levels
+    
+                    // Simulate increased glucose after eating
+                    if (time % 10 === 0) {
+                        glucoseLevel += Math.random() * 50;
+                    }
+    
+                    // Check if glucose exceeds the average level plus 20 points and administer insulin proportionally
+                    if (glucoseLevel > averageLevel + 20) {
+                        insulinLevel = 10 * ((glucoseLevel - averageLevel - 20) / 10);
+                        glucoseLevel -= insulinLevel / 2;
+                    }
+    
+                    // Add data to the chart and update input values
+                    addData(time, insulinLevel, averageLevel, glucoseLevel);
+                }
+    
+                if (!dosVulnerabilityActivated) {
+                    // Start the chart simulation only if DoS vulnerability is not activated
+                    setInterval(updateChart, 2000); // Update interval in milliseconds (adjust as needed)
+                } else {
+                    // If DoS vulnerability is activated, log a message
+                    console.log('DoS Attack: Chart simulation paused');
+                }
+            }
+    
+            // Start the chart simulation
+            simulateChartUpdate();
+        });
+    </script>
+    
+    
+    
+    
+
+</body>
+</html>
